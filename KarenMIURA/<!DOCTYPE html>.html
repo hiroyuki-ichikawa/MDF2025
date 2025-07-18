@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>めざせ！サッカーはかせクイズ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+
+    <style>
+        /* M PLUS Rounded 1cフォントを全体に適用 */
+        body {
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+        }
+        /* 画面切り替え時のアニメーション */
+        .screen {
+            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+            width: 100%;
+        }
+        .screen.hidden {
+            opacity: 0;
+            transform: scale(0.95);
+            pointer-events: none; /* 非表示の画面はクリックできないように */
+            position: absolute; /* 非表示の画面がレイアウトに影響しないように */
+            left: -9999px; /* 画面外に飛ばす */
+        }
+        /* ボタンのスタイル */
+        .btn {
+            @apply text-white font-bold py-3 px-6 rounded-lg shadow-md transform transition-transform duration-150 ease-in-out;
+        }
+        .btn:hover {
+            @apply scale-105;
+        }
+        .btn:active {
+            @apply scale-95;
+        }
+        /* 〇✕ボタンの巨大なスタイル */
+        .choice-btn {
+            /* ★サイズを大きく変更★ */
+            @apply w-80 h-80 md:w-[320px] md:h-[320px] flex items-center justify-center text-[15rem] md:text-[20rem] font-extrabold rounded-2xl shadow-lg border-4 border-white transform transition-transform duration-150;
+        }
+        /* 正解・不正解フィードバックのスタイル */
+        .feedback-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 100;
+        }
+        .feedback-symbol {
+            font-size: 20rem;
+            font-weight: 900;
+            line-height: 1;
+            text-shadow: 0 0 20px rgba(0,0,0,0.5);
+            transform: scale(0.5);
+            opacity: 0;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease-out;
+        }
+        
+        /* ゴールアニメーションの定義 */
+        @keyframes goal-animation {
+            0% {
+                /* 開始時：中央に表示 */
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+            100% {
+                /* 終了時：少し上に移動し、小さくして消える */
+                transform: translate(-50%, -120%) scale(0.1);
+                opacity: 0;
+            }
+        }
+        /* アニメーションを適用するクラス */
+        .goal-animate {
+            animation: goal-animation 0.7s ease-in forwards;
+        }
+    </style>
+</head>
+<body class="bg-gray-800 text-white flex items-center justify-center min-h-screen overflow-hidden">
+
+    <div class="container mx-auto p-4 w-full max-w-3xl relative flex items-center justify-center" style="min-height: 600px;">
+
+        <div id="title-screen" class="screen text-center">
+            <h1 class="text-4xl md:text-6xl font-extrabold mb-2 text-yellow-300" style="text-shadow: 2px 2px 4px #000;">めざせ！</h1>
+            <h1 class="text-4xl md:text-6xl font-extrabold mb-4 text-yellow-300" style="text-shadow: 2px 2px 4px #000;">サッカーはかせクイズ</h1>
+
+            <div class="flex flex-col items-center gap-4 mt-4">
+                <div class="relative inline-block">
+                    <img src="img/Gole.png" alt="ゴール" class="block w-64 md:w-80 h-auto">
+                    <img id="soccer-ball" src="img/image3.png" alt="サッカーボール" class="absolute w-24 md:w-32 h-auto top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                </div>
+                
+                <button id="start-button" class="btn bg-green-500 hover:bg-green-600 text-2xl w-full md:w-auto">
+                    スタート！
+                </button>
+            </div>
+        </div>
+
+        <div id="difficulty-screen" class="screen text-center hidden">
+            <h2 class="text-3xl md:text-4xl font-bold mb-8">むずかしさをえらんでね</h2>
+            <div class="space-y-4">
+                <button data-difficulty="easy" class="btn difficulty-btn bg-blue-500 hover:bg-blue-600 w-full text-xl">
+                    かんたん<br><span class="text-sm font-normal">（きほんのルール）</span>
+                </button>
+                <button data-difficulty="normal" class="btn difficulty-btn bg-yellow-500 hover:bg-yellow-600 w-full text-xl">
+                    ふつう<br><span class="text-sm font-normal">（くわしいルール）</span>
+                </button>
+                <button data-difficulty="hard" class="btn difficulty-btn bg-red-500 hover:bg-red-600 w-full text-xl">
+                    むずかしい<br><span class="text-sm font-normal">（マニアックなちしき）</span>
+                </button>
+            </div>
+        </div>
+        
+        <div id="quiz-screen" class="screen text-center hidden">
+            <div class="flex justify-between items-center mb-4">
+                <div id="question-counter" class="text-xl font-bold">だい 1 もん</div>
+                <div id="timer" class="text-4xl font-bold text-yellow-300">00:30</div>
+                <div id="score-display" class="text-xl font-bold">せいかい: 0</div>
+            </div>
+            <div id="question-box" class="bg-gray-200 text-gray-800 p-6 rounded-lg min-h-[150px] flex items-center justify-center text-xl md:text-2xl font-bold mb-6 shadow-inner">
+                問題文がここに表示されます。
+            </div>
+            <div class="flex flex-col sm:flex-row justify-center items-center sm:gap-x-8 gap-y-4">
+                <button id="maru-btn" class="choice-btn bg-white text-red-500">O</button>
+                <button id="batsu-btn" class="choice-btn bg-white text-blue-500">X</button>
+            </div>
+            <div id="explanation-box" class="mt-6 bg-blue-900/50 p-4 rounded-lg text-lg min-h-[100px] hidden">
+            </div>
+        </div>
+
+        <div id="result-screen" class="screen text-center hidden">
+            <h2 class="text-4xl font-bold mb-4">けっか はっぴょう！</h2>
+            <div class="text-2xl mb-6">
+                <span id="total-questions">10</span>もんちゅう <span id="final-score" class="text-yellow-300 text-5xl font-extrabold">0</span> もん せいかい！
+            </div>
+            <div class="bg-yellow-400 text-gray-800 p-6 rounded-lg shadow-lg mb-8">
+                <p class="text-xl mb-2">きみのしょうごうは…</p>
+                <h3 id="title-display" class="text-4xl font-black">しょうごう</h3>
+            </div>
+            <button id="restart-button" class="btn bg-green-500 hover:bg-green-600 text-2xl w-full md:w-auto">
+                もういちどチャレンジ！
+            </button>
+        </div>
+
+    </div>
+
+    <div id="feedback-overlay" class="feedback-overlay hidden">
+        <div id="feedback-symbol" class="feedback-symbol"></div>
+    </div>
+    
+    <script>
+        // ----- DOM要素の取得 -----
+        const screens = {
+            title: document.getElementById('title-screen'),
+            difficulty: document.getElementById('difficulty-screen'),
+            quiz: document.getElementById('quiz-screen'),
+            result: document.getElementById('result-screen'),
+        };
+        const startButton = document.getElementById('start-button');
+        const difficultyButtons = document.querySelectorAll('.difficulty-btn');
+        const questionCounter = document.getElementById('question-counter');
+        const timerDisplay = document.getElementById('timer');
+        const scoreDisplay = document.getElementById('score-display');
+        const questionBox = document.getElementById('question-box');
+        const maruButton = document.getElementById('maru-btn');
+        const batsuButton = document.getElementById('batsu-btn');
+        const explanationBox = document.getElementById('explanation-box');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const totalQuestionsDisplay = document.getElementById('total-questions');
+        const titleDisplay = document.getElementById('title-display');
+        const restartButton = document.getElementById('restart-button');
+        const feedbackOverlay = document.getElementById('feedback-overlay');
+        const feedbackSymbol = document.getElementById('feedback-symbol');
+        const soccerBall = document.getElementById('soccer-ball');
+
+        // ----- 音の準備 -----
+        const synth = new Tone.Synth().toDestination();
+        const sounds = {
+            click: () => synth.triggerAttackRelease("C4", "8n"),
+            correct: () => synth.triggerAttackRelease("C5", "8n", Tone.now()),
+            incorrect: () => synth.triggerAttackRelease("C3", "8n", Tone.now()),
+            finish: () => {
+                const now = Tone.now();
+                synth.triggerAttackRelease("C4", "8n", now);
+                synth.triggerAttackRelease("E4", "8n", now + 0.2);
+                synth.triggerAttackRelease("G4", "8n", now + 0.4);
+                synth.triggerAttackRelease("C5", "8n", now + 0.6);
+            }
+        };
+
+        // ----- クイズデータ -----
+        const quizzes = {
+            easy: [
+                { q: "サッカーは、1チーム11人でたたかう。", a: true, ex: "せいかい！サッカーはゴールキーパーをふくめて11人でおこなうよ。" },
+                { q: "ボールがゴールラインをぜんぶこえたら、ゴールになる。", a: true, ex: "そのとおり！ボールがすこしでもラインにのこっていたらノーゴールなんだ。" },
+                { q: "ゴールキーパーいがいは、手やうでをつかってはいけない。", a: true, ex: "せいかい！手やうでをつかうと「ハンド」という反則になるよ。" },
+                { q: "しあいの時間は、ぜんぶで45分である。", a: false, ex: "ざんねん！しあいは前半45分と後半45分の、あわせて90分だよ。" },
+                { q: "あいてのゴールにボールをいれたら10点もらえる。", a: false, ex: "ちがうよー！ゴールはなんかいきめても1点ずつなんだ。" },
+                { q: "ボールがタッチラインから出たら、手でなげてリスタートする。", a: true, ex: "せいかい！これを「スローイン」というよ。りょうあしを地面につけて、頭のうしろからなげるんだ。" },
+                { q: "しあいをはじめるキックのことを「コーナーキック」という。", a: false, ex: "ざんねん！しあいをはじめるときや、ゴールがはいったあとのキックは「キックオフ」だよ。" },
+                { q: "あいてをけったり、おしたりするのは反則になる。", a: true, ex: "もちろん！サッカーは安全にたたかうスポーツ。あぶないプレーは「ファウル」になるよ。" },
+                { q: "サッカーボールは、しかくい形をしている。", a: false, ex: "えーっ！サッカーボールはまるい形だよ。じゃないと、うまくころがらないね！" },
+                { q: "ユニフォームは、てきとみかたがわかりやすいように、ちがう色をきる。", a: true, ex: "そのとおり！ゴールキーパーだけは、さらにちがう色のユニフォームをきるんだ。" },
+            ],
+            normal: [
+                { q: "オフサイドは、フィールドのどこでもおこりうる反則だ。", a: false, ex: "ざんねん！オフサイドは、あいてチームの陣地（フィールドの半分よりゴールがわ）でしかおこらないんだ。" },
+                { q: "コーナーキックから、だれにもさわらずに直接ゴールにはいっても、とくてんになる。", a: true, ex: "せいかい！とてもむずかしいけど、ルール上はOKなんだ。これを「オウンゴール」とはよばないよ。" },
+                { q: "イエローカードを同じしあいで2まいもらうと、退場になる。", a: true, ex: "そのとおり！イエローカード2まいでレッドカードとおなじあつかいになり、そのしあいはもう出られなくなるんだ。" },
+                { q: "ゴールキーパーが、味方からのスローインを手でキャッチしてもよい。", a: false, ex: "ざんねん！味方からのスローインや、足で意図的に出されたパスは、ゴールキーパーも手でさわれないんだ。足であつかわないといけないよ。" },
+                { q: "PK（ペナルティーキック）は、ゴールから11メートルのきょりからける。", a: true, ex: "せいかい！ゴールラインから12ヤード、メートルにするとだいたい11メートルなんだ。" },
+            ],
+            hard: [
+                { q: "ワールドカップで、いちばんたくさん優勝している国はブラジルである。", a: true, ex: "せいかい！「サッカー王国」とよばれるブラジルは、これまで5回も優勝しているんだ。" },
+                { q: "コーナーキックをけるとき、ボールをけった本人が、だれもさわる前にもう一度ボールにさわってもよい。", a: false, ex: "ざんねん！キックインプレーのルールで、キッカーは他のせんしゅがさわるまでボールにふれてはいけないんだ。" },
+                { q: "スローインから直接オウンゴール（じぶんのゴールにいれる）をしても、とくてんにはならず、相手のコーナーキックになる。", a: true, ex: "せいかい！これはマニアックなルール。スローインが直接じぶんのゴールにはいっても失点にはならないんだ。" },
+                { q: "サッカーの神様とよばれた「ペレ」は、プロのしあいで1000ゴール以上きめた。", a: true, ex: "せいかい！ペレは、そのしょうがいで1281ゴールもきめたとされている、まさに伝説のせんしゅだよ。" },
+                { q: "Jリーグがはじまったのは、1983年である。", a: false, ex: "ざんねん！日本のプロサッカーリーグ「Jリーグ」が開幕したのは、1993年5月15日なんだ。" },
+            ]
+        };
+
+        // ----- ゲームの状態管理 -----
+        let currentQuestions = [];
+        let questionIndex = 0;
+        let score = 0;
+        let timerInterval;
+        let timeLeft = 0;
+        const TIME_LIMIT = 30;
+
+        // ----- 関数 -----
+        function showScreen(screenName) {
+            Object.keys(screens).forEach(key => {
+                if (key === screenName) {
+                    screens[key].classList.remove('hidden');
+                } else {
+                    screens[key].classList.add('hidden');
+                }
+            });
+        }
+        
+        function startGame() {
+            sounds.click();
+            soccerBall.classList.add('goal-animate');
+
+            setTimeout(() => {
+                showScreen('difficulty');
+                soccerBall.classList.remove('goal-animate');
+            }, 700);
+        }
+
+        function selectDifficulty(difficulty) {
+            sounds.click();
+            currentQuestions = quizzes[difficulty].sort(() => 0.5 - Math.random()).slice(0, 10);
+            startQuiz();
+        }
+
+        function startQuiz() {
+            questionIndex = 0;
+            score = 0;
+            scoreDisplay.textContent = `せいかい: 0`;
+            showScreen('quiz');
+            displayNextQuestion();
+        }
+
+        function displayNextQuestion() {
+            explanationBox.classList.add('hidden');
+            maruButton.disabled = false;
+            batsuButton.disabled = false;
+            
+            if (questionIndex < currentQuestions.length) {
+                const q = currentQuestions[questionIndex];
+                questionBox.textContent = q.q;
+                questionCounter.textContent = `だい ${questionIndex + 1} もん`;
+                startTimer();
+            } else {
+                showResult();
+            }
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            timeLeft = TIME_LIMIT;
+            timerDisplay.textContent = `00:${String(timeLeft).padStart(2, '0')}`;
+            timerDisplay.classList.remove('text-red-500');
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = `00:${String(timeLeft).padStart(2, '0')}`;
+                if (timeLeft <= 10) {
+                    timerDisplay.classList.add('text-red-500');
+                }
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    checkAnswer(null);
+                }
+            }, 1000);
+        }
+
+        function checkAnswer(userAnswer) {
+            clearInterval(timerInterval);
+            maruButton.disabled = true;
+            batsuButton.disabled = true;
+
+            const correct = currentQuestions[questionIndex].a;
+            const isCorrect = userAnswer === correct;
+
+            if (isCorrect) {
+                score++;
+                scoreDisplay.textContent = `せいかい: ${score}`;
+                showFeedback(true);
+                sounds.correct();
+            } else {
+                showFeedback(false);
+                sounds.incorrect();
+            }
+            
+            explanationBox.textContent = currentQuestions[questionIndex].ex;
+            explanationBox.classList.remove('hidden');
+
+            questionIndex++;
+            setTimeout(displayNextQuestion, 4000);
+        }
+
+        function showFeedback(isCorrect) {
+            feedbackSymbol.textContent = isCorrect ? 'O' : 'X';
+            feedbackSymbol.style.color = isCorrect ? '#ef4444' : '#3b82f6';
+            feedbackOverlay.classList.remove('hidden');
+            
+            setTimeout(() => {
+                feedbackSymbol.style.transform = 'scale(1)';
+                feedbackSymbol.style.opacity = '1';
+            }, 10);
+            
+            setTimeout(() => {
+                feedbackSymbol.style.transform = 'scale(0.5)';
+                feedbackSymbol.style.opacity = '0';
+                setTimeout(() => feedbackOverlay.classList.add('hidden'), 300);
+            }, 1500);
+        }
+
+        function showResult() {
+            sounds.finish();
+            showScreen('result');
+            finalScoreDisplay.textContent = score;
+            totalQuestionsDisplay.textContent = currentQuestions.length;
+            
+            let title = '';
+            const percentage = (score / currentQuestions.length) * 100;
+
+            if (percentage >= 95) title = 'でんせつのサッカーキング！';
+            else if (percentage >= 80) title = 'にほんだいひょうエース！';
+            else if (percentage >= 65) title = 'サッカーはかせ';
+            else if (percentage >= 45) title = 'みらいのJリーガー';
+            else if (percentage >= 25) title = 'サッカーリフティング10かいレベル';
+            else title = 'サッカーだいすき！にゅうもん';
+
+            titleDisplay.textContent = title;
+        }
+
+        function restartGame() {
+            sounds.click();
+            showScreen('title');
+        }
+
+        // ----- イベントリスナーの設定 -----
+        startButton.addEventListener('click', startGame);
+        difficultyButtons.forEach(button => {
+            button.addEventListener('click', () => selectDifficulty(button.dataset.difficulty));
+        });
+        maruButton.addEventListener('click', () => checkAnswer(true));
+        batsuButton.addEventListener('click', () => checkAnswer(false));
+        restartButton.addEventListener('click', restartGame);
+        
+        // ----- 初期化 -----
+        showScreen('title');
+
+    </script>
+</body>
+</html>

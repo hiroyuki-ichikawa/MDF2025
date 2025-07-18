@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>福笑い</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 2rem 0;
+      background: #fff;
+    }
+    #game {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 2rem;
+      margin-top: 1rem;
+    }
+    #main-game {
+    display: none;
+    }
+    #board {
+      position: relative;
+      width: 300px;
+      height: 400px;
+      border: 1px solid #333;
+      background: #fff;
+      overflow: hidden;
+    }
+    #face-bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: url('face-outline.png') center/contain no-repeat;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .piece {
+      width: 64px;
+      height: 64px;
+      background: transparent center/contain no-repeat;
+      position: absolute;
+      cursor: move;
+      transform-origin: center center;
+      touch-action: none;
+      z-index: 1;
+    }
+    .piece.mouth {
+      width: 96px;
+      height: 64px;
+    }
+    .piece.lefteye {
+      background-image: url(leftEye.svg);
+    }
+    .piece.righteye {
+      background-image: url(righteye.svg);
+    }
+    .piece.nose {
+      background-image: url(nose.svg);
+    }
+    .piece.mouth {
+      background-image: url(mouth.svg);
+    }
+    .piece.selected {
+      outline: 2px solid #00f;
+    }
+    .resize-handle {
+      width: 8px;
+      height: 8px;
+      background: #00f;
+      border-radius: 50%;
+      position: absolute;
+      z-index: 2;
+    }
+    .resize-handle.tl { top: -4px; left: -4px; }
+    .resize-handle.tr { top: -4px; right: -4px; }
+    .resize-handle.bl { bottom: -4px; left: -4px; }
+    .resize-handle.br { bottom: -4px; right: -4px; }
+    button {
+      margin: 1rem 0.5rem;
+      padding: 0.6rem 1.2rem;
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+    <!-- タイトル画面 -->
+  <div id="start-screen">
+    <img src="starttitle.png" alt="スタートタイトル画像">
+  </div>
+    <!-- ゲーム画面 -->
+      <div id="main-game">
+  <h1>福笑い</h1>
+  <p>パーツを移動・拡大縮小・回転して遊んでね！</p>
+  <div id="game">
+
+    <div id="board">
+      <div id="face-bg"></div>
+    </div>
+  </div>
+  <button id="save">保存（JPEG）</button>
+  <button id="reset">リセット</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.11/dist/interact.min.js"></script>
+  <script>
+
+    document.getElementById("start-screen").addEventListener("click", () => {
+      document.getElementById("start-screen").style.display = "none";
+      document.getElementById("main-game").style.display = "block";
+    });
+
+    const parts = ["lefteye", "righteye", "nose", "mouth"];
+    const board = document.getElementById("board");
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.piece') && !e.target.classList.contains('resize-handle')) {
+    deselectAll();
+  }
+    });
+    function deselectAll() {
+    document.querySelectorAll('.piece').forEach(p => {
+    p.classList.remove('selected');
+    p.querySelectorAll('.resize-handle').forEach(h => h.remove());
+    });
+  }
+
+    function createPiece(part) {
+      const el = document.createElement("div");
+      el.className = `piece ${part}`;
+      el.dataset.part = part;
+      el.setAttribute("data-x", 0);
+      el.setAttribute("data-y", 0);
+      el.setAttribute("data-angle", 0);
+      el.setAttribute("data-scale", 1);
+      el.style.left = `${Math.random() * 180}px`;
+      el.style.top = `${Math.random() * 330}px`;
+      el.style.transform = "translate(0px, 0px) rotate(0deg) scale(1)";
+      board.appendChild(el);
+      function deselectAll() {
+      document.querySelectorAll('.piece').forEach(p => {
+        p.classList.remove('selected');
+        p.querySelectorAll('.resize-handle').forEach(h => h.remove());
+      });
+      }
+      el.addEventListener('click', () => {
+        document.querySelectorAll('.piece').forEach(p => {
+          p.classList.remove('selected');
+          p.querySelectorAll('.resize-handle').forEach(h => h.remove());
+        });
+        el.classList.add('selected');
+        ['tl','tr','bl','br'].forEach(pos => {
+          const dot = document.createElement('div');
+          dot.className = `resize-handle ${pos}`;
+          el.appendChild(dot);
+          interact(dot).draggable({
+            listeners: {
+              start(ev) {
+                const rect = el.getBoundingClientRect();
+                el.dataset.centerX = rect.left + rect.width / 2;
+                el.dataset.centerY = rect.top + rect.height / 2;
+                const dx = ev.client.x - el.dataset.centerX;
+                const dy = ev.client.y - el.dataset.centerY;
+                el.dataset.startAngle = Math.atan2(dy, dx) * 180 / Math.PI;
+              },
+              move(ev) {
+                const cx = parseFloat(el.dataset.centerX);
+                const cy = parseFloat(el.dataset.centerY);
+                const dx = ev.client.x - cx;
+                const dy = ev.client.y - cy;
+                const newAngle = Math.atan2(dy, dx) * 180 / Math.PI;
+                const delta = newAngle - parseFloat(el.dataset.startAngle);
+                const current = parseFloat(el.dataset.angle) || 0;
+                el.dataset.angle = current + delta;
+                el.dataset.startAngle = newAngle;
+                updateTransform(el);
+              },
+            },
+          });
+        });
+      });
+      return el;
+    }
+
+    function updateTransform(target) {
+      const x = parseFloat(target.dataset.x) || 0;
+      const y = parseFloat(target.dataset.y) || 0;
+      const angle = parseFloat(target.dataset.angle) || 0;
+      const scale = parseFloat(target.dataset.scale) || 1;
+      target.style.transform = `translate(${x}px, ${y}px) rotate(${angle}deg) scale(${scale})`;
+    }
+    
+    parts.forEach(part => createPiece(part));
+
+    interact(".piece")
+      .draggable({
+        listeners: {
+          move(event) {
+            const target = event.target;
+            const x = (parseFloat(target.dataset.x) || 0) + event.dx;
+            const y = (parseFloat(target.dataset.y) || 0) + event.dy;
+            target.dataset.x = x;
+            target.dataset.y = y;
+            updateTransform(target);
+          },
+        },
+      })
+      .resizable({
+        edges: { left: true, right: true, bottom: true, top: true },
+        modifiers: [
+          interact.modifiers.aspectRatio({ ratio: 'preserve' }),
+        ],
+        listeners: {
+          move(event) {
+            const target = event.target;
+              const originalWidth = target.dataset.originalWidth
+                ? parseFloat(target.dataset.originalWidth)
+                : target.offsetWidth;
+              const originalHeight = target.dataset.originalHeight
+                ? parseFloat(target.dataset.originalHeight)
+                : target.offsetHeight;
+              if (!target.dataset.originalWidth) {
+                target.dataset.originalWidth = originalWidth;
+                target.dataset.originalHeight = originalHeight;
+              }
+                const newWidth = event.rect.width;
+                const newHeight = event.rect.height;
+                // 小さくなりすぎるのを防ぐ
+                const minWidth = originalWidth;
+                const minHeight = originalHeight;
+              if (newWidth < minWidth || newHeight < minHeight) {
+                return;
+              }
+              const dx = (target.offsetWidth - newWidth) / 2;
+              const dy = (target.offsetHeight - newHeight) / 2;
+              const x = (parseFloat(target.dataset.x) || 0) + dx;
+              const y = (parseFloat(target.dataset.y) || 0) + dy;
+              target.style.width = `${newWidth}px`;
+              target.style.height = `${newHeight}px`;
+              target.dataset.x = x;
+              target.dataset.y = y;
+              updateTransform(target);
+            }
+          },
+        inertia: true,
+      });
+
+
+    document.getElementById("save").addEventListener("click", () => {
+      html2canvas(document.getElementById("board"), {
+        useCORS: true,
+        backgroundColor: "#fff",
+        scale: 7
+      }).then((canvas) => {
+        const link = document.createElement("a");
+        link.download = "fukuwarai.jpg";
+        link.href = canvas.toDataURL("image/jpeg", 0.95);
+        link.click();
+      });
+    });
+
+    document.getElementById("reset").addEventListener("click", () => {
+      document.querySelectorAll(".piece").forEach(p => p.remove());
+      parts.forEach(part => createPiece(part));
+    });
+  </script>
+</body>
+</html>

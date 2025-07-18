@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>沃沮ちゃんのお米キャッチ！</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Potta+One&display=swap" rel="stylesheet">
+    <style>
+        *{
+            font-family: "Potta One", serif;
+            font-style: normal;
+            margin: 0;
+            padding: 0;
+        }
+        li{
+            list-style: none;
+        }
+        img{
+            vertical-align: bottom;
+        }
+        body{
+            background-color: #936dee;
+        }
+        main{
+            width: 1000px;
+            color: #fff;
+            margin: 0 auto;
+        }
+        h1, h2, ul{
+            text-align: center;
+        }
+        #gameCanvas{
+            border: #f9fe91;
+        }
+        h2{
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>沃沮ちゃんのお米キャッチ！</h1>
+        <canvas id="gameCanvas" width="1000" height="600"></canvas>
+        <h2>🌾あそびかた🌾</h2>
+        <ul>
+            <li>右と左の矢印キーで沃沮ちゃんを操作しよう！</li>
+            <li>土器にお米が入るとスコアが増えるよ！</li>
+            <li>玄米は１つぶ、白米は３つぶ増えるよ！</li>
+            <li>トケビが土器に入りこむと土器が割れちゃうよ。トケビをうまくかわそう！</li>
+            <li>２００つぶ以上とるとクリア！ 沃沮ちゃんの夕食をお米のごはんにしてあげてね！</li>
+        </ul>
+        <h2>🌾ストーリー🌾</h2>
+        <ul>
+            <li>紀元前１世紀頃の朝鮮半島最北部。</li>
+            <li>そこには「五穀がよく育つ」と伝えられる東夷の民族が住まう地があった。</li>
+            <li>その地の名を「沃沮」と呼ぶ。</li>
+            <li>しかし、いくら穀物が育つとはいえ、寒冷地であるため米が育たない。</li>
+            <li>そんなとき、米の神が沃沮に微笑んだ──！</li>
+        </ul>
+
+    </main>
+    <script src="game.js"></script>
+</body>
+</html>

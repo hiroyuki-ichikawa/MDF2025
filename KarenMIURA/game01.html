@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>めざせ！サッカーはかせクイズ</title>
+    <!-- Tailwind CSSを読み込み -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (M PLUS Rounded 1c) を読み込み -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+    <!-- 音を出すためのTone.jsを読み込み -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+
+    <style>
+        /* M PLUS Rounded 1cフォントを全体に適用 */
+        body {
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+        }
+        /* 画面切り替え時のアニメーション */
+        .screen {
+            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+            width: 100%;
+        }
+        .screen.hidden {
+            opacity: 0;
+            transform: scale(0.95);
+            pointer-events: none; /* 非表示の画面はクリックできないように */
+            position: absolute; /* 非表示の画面がレイアウトに影響しないように */
+            left: -9999px; /* 画面外に飛ばす */
+        }
+        /* ボタンのスタイル */
+        .btn {
+            @apply text-white font-bold py-3 px-6 rounded-lg shadow-md transform transition-transform duration-150 ease-in-out;
+        }
+        .btn:hover {
+            @apply scale-105;
+        }
+        .btn:active {
+            @apply scale-95;
+        }
+        /* 〇✕ボタンの巨大なスタイル (さらにサイズを大きくし、レスポンシブ対応) */
+        .choice-btn {
+            @apply w-48 h-48 md:w-64 md:h-64 flex items-center justify-center text-8xl md:text-9xl font-extrabold rounded-2xl shadow-lg border-4 border-white transform transition-transform duration-150;
+        }
+        /* 正解・不正解フィードバックのスタイル */
+        .feedback-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 100;
+        }
+        .feedback-symbol {
+            font-size: 20rem;
+            font-weight: 900;
+            line-height: 1;
+            text-shadow: 0 0 20px rgba(0,0,0,0.5);
+            transform: scale(0.5);
+            opacity: 0;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease-out;
+        }
+        /* ローディングスピナー */
+        .loader {
+            border: 8px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 8px solid #3498db;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        img{
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .ball{
+            padding-left: 100px;
+        }
+    </style>
+</head>
+<body class="bg-gray-800 text-white flex items-center justify-center min-h-screen overflow-hidden">
+
+    <div class="container mx-auto p-4 w-full max-w-3xl relative flex items-center justify-center" style="min-height: 600px;">
+
+        <!-- ===== タイトル画面 ===== -->
+        <div id="title-screen" class="screen text-center">
+            <h1 class="text-4xl md:text-6xl font-extrabold mb-2 text-yellow-300" style="text-shadow: 2px 2px 4px #000;">めざせ！</h1>
+            <h1 class="text-4xl md:text-6xl font-extrabold mb-8 text-yellow-300" style="text-shadow: 2px 2px 4px #000;">サッカーはかせクイズ</h1>
+            <img src="img/Gole.png" alt="">
+        <div class="ball"><img src="img/image3.png"  width="200" height="200" alt="サッカーボール" class="mx-auto mb-8 rounded-lg"></div>
+            
+            <button id="start-button" class="btn bg-green-500 hover:bg-green-600 text-2xl w-full md:w-auto">
+                スタート！
+            </button>
+        </div>
+
+        <!-- ===== 難易度選択画面 ===== -->
+        <div id="difficulty-screen" class="screen text-center hidden">
+            <h2 class="text-3xl md:text-4xl font-bold mb-8">むずかしさをえらんでね</h2>
+            <div class="space-y-4">
+                <button data-difficulty="easy" class="btn difficulty-btn bg-blue-500 hover:bg-blue-600 w-full text-xl">
+                    かんたん<br><span class="text-sm font-normal">（きほんのルール）</span>
+                </button>
+                <button data-difficulty="normal" class="btn difficulty-btn bg-yellow-500 hover:bg-yellow-600 w-full text-xl">
+                    ふつう<br><span class="text-sm font-normal">（くわしいルール）</span>
+                </button>
+                <button data-difficulty="hard" class="btn difficulty-btn bg-red-500 hover:bg-red-600 w-full text-xl">
+                    むずかしい<br><span class="text-sm font-normal">（マニアックなちしき）</span>
+                </button>
+                <button id="ai-quiz-button" class="btn bg-purple-600 hover:bg-purple-700 w-full text-xl mt-4">
+                    ✨AIにクイズをつくってもらう✨
+                </button>
+            </div>
+        </div>
+        
+        <!-- ===== AIクイズ生成画面 ===== -->
+        <div id="ai-screen" class="screen text-center hidden">
+            <h2 class="text-3xl md:text-4xl font-bold mb-4">AIクイズ作成</h2>
+            <p class="mb-6">クイズのテーマをいれてね（れい：メッシ、ワールドカップ）</p>
+            <input type="text" id="ai-theme-input" class="text-black w-full p-3 rounded-lg text-xl mb-4" placeholder="ここにテーマをかく">
+            <button id="generate-ai-quiz-button" class="btn bg-green-500 hover:bg-green-600 w-full text-xl">
+                クイズをつくる！
+            </button>
+            <button id="back-to-difficulty-button" class="btn bg-gray-500 hover:bg-gray-600 w-full text-lg mt-4">
+                もどる
+            </button>
+        </div>
+
+        <!-- ===== クイズ画面 ===== -->
+        <div id="quiz-screen" class="screen text-center hidden">
+            <div class="flex justify-between items-center mb-4">
+                <div id="question-counter" class="text-xl font-bold">だい 1 もん</div>
+                <div id="timer" class="text-4xl font-bold text-yellow-300">00:30</div>
+                <div id="score-display" class="text-xl font-bold">せいかい: 0</div>
+            </div>
+            <div id="question-box" class="bg-gray-200 text-gray-800 p-6 rounded-lg min-h-[150px] flex items-center justify-center text-xl md:text-2xl font-bold mb-6 shadow-inner">
+                問題文がここに表示されます。
+            </div>
+            <!-- ボタンのレイアウトを修正: 小さい画面では縦並び、大きい画面で横並び -->
+            <div class="flex flex-col sm:flex-row justify-center items-center sm:gap-x-8 gap-y-4">
+                <button id="maru-btn" class="choice-btn bg-white text-red-500">O</button>
+                <button id="batsu-btn" class="choice-btn bg-white text-blue-500">X</button>
+            </div>
+            <div id="explanation-box" class="mt-6 bg-blue-900/50 p-4 rounded-lg text-lg min-h-[100px] hidden">
+            </div>
+        </div>
+
+        <!-- ===== 結果画面 ===== -->
+        <div id="result-screen" class="screen text-center hidden">
+            <h2 class="text-4xl font-bold mb-4">けっか はっぴょう！</h2>
+            <div class="text-2xl mb-6">
+                <span id="total-questions">10</span>もんちゅう <span id="final-score" class="text-yellow-300 text-5xl font-extrabold">0</span> もん せいかい！
+            </div>
+            <div class="bg-yellow-400 text-gray-800 p-6 rounded-lg shadow-lg mb-8">
+                <p class="text-xl mb-2">きみのしょうごうは…</p>
+                <h3 id="title-display" class="text-4xl font-black">しょうごう</h3>
+            </div>
+            <button id="restart-button" class="btn bg-green-500 hover:bg-green-600 text-2xl w-full md:w-auto">
+                もういちどチャレンジ！
+            </button>
+        </div>
+
+    </div>
+
+    <!-- 正解・不正解のフィードバック表示用 -->
+    <div id="feedback-overlay" class="feedback-overlay hidden">
+        <div id="feedback-symbol" class="feedback-symbol"></div>
+    </div>
+    
+    <!-- ローディング表示用 -->
+    <div id="loading-overlay" class="feedback-overlay hidden flex-col">
+        <div class="loader"></div>
+        <p class="text-white text-2xl mt-4">AIがクイズを考え中…</p>
+    </div>
+
+
+    <script>
+        // ----- DOM要素の取得 -----
+        const screens = {
+            title: document.getElementById('title-screen'),
+            difficulty: document.getElementById('difficulty-screen'),
+            ai: document.getElementById('ai-screen'),
+            quiz: document.getElementById('quiz-screen'),
+            result: document.getElementById('result-screen'),
+        };
+        const startButton = document.getElementById('start-button');
+        const difficultyButtons = document.querySelectorAll('.difficulty-btn');
+        const aiQuizButton = document.getElementById('ai-quiz-button');
+        const aiThemeInput = document.getElementById('ai-theme-input');
+        const generateAiQuizButton = document.getElementById('generate-ai-quiz-button');
+        const backToDifficultyButton = document.getElementById('back-to-difficulty-button');
+        const questionCounter = document.getElementById('question-counter');
+        const timerDisplay = document.getElementById('timer');
+        const scoreDisplay = document.getElementById('score-display');
+        const questionBox = document.getElementById('question-box');
+        const maruButton = document.getElementById('maru-btn');
+        const batsuButton = document.getElementById('batsu-btn');
+        const explanationBox = document.getElementById('explanation-box');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const totalQuestionsDisplay = document.getElementById('total-questions');
+        const titleDisplay = document.getElementById('title-display');
+        const restartButton = document.getElementById('restart-button');
+        const feedbackOverlay = document.getElementById('feedback-overlay');
+        const feedbackSymbol = document.getElementById('feedback-symbol');
+        const loadingOverlay = document.getElementById('loading-overlay');
+
+        // ----- 音の準備 -----
+        const synth = new Tone.Synth().toDestination();
+        const sounds = {
+            click: () => synth.triggerAttackRelease("C4", "8n"),
+            correct: () => synth.triggerAttackRelease("C5", "8n", Tone.now()),
+            incorrect: () => synth.triggerAttackRelease("C3", "8n", Tone.now()),
+            finish: () => {
+                const now = Tone.now();
+                synth.triggerAttackRelease("C4", "8n", now);
+                synth.triggerAttackRelease("E4", "8n", now + 0.2);
+                synth.triggerAttackRelease("G4", "8n", now + 0.4);
+                synth.triggerAttackRelease("C5", "8n", now + 0.6);
+            }
+        };
+
+        // ----- クイズデータ -----
+        const quizzes = {
+            easy: [
+                { q: "サッカーは、1チーム11人でたたかう。", a: true, ex: "せいかい！サッカーはゴールキーパーをふくめて11人でおこなうよ。" },
+                { q: "ボールがゴールラインをぜんぶこえたら、ゴールになる。", a: true, ex: "そのとおり！ボールがすこしでもラインにのこっていたらノーゴールなんだ。" },
+                { q: "ゴールキーパーいがいは、手やうでをつかってはいけない。", a: true, ex: "せいかい！手やうでをつかうと「ハンド」という反則になるよ。" },
+                { q: "しあいの時間は、ぜんぶで45分である。", a: false, ex: "ざんねん！しあいは前半45分と後半45分の、あわせて90分だよ。" },
+                { q: "あいてのゴールにボールをいれたら10点もらえる。", a: false, ex: "ちがうよー！ゴールはなんかいきめても1点ずつなんだ。" },
+                { q: "ボールがタッチラインから出たら、手でなげてリスタートする。", a: true, ex: "せいかい！これを「スローイン」というよ。りょうあしを地面につけて、頭のうしろからなげるんだ。" },
+                { q: "しあいをはじめるキックのことを「コーナーキック」という。", a: false, ex: "ざんねん！しあいをはじめるときや、ゴールがはいったあとのキックは「キックオフ」だよ。" },
+                { q: "あいてをけったり、おしたりするのは反則になる。", a: true, ex: "もちろん！サッカーは安全にたたかうスポーツ。あぶないプレーは「ファウル」になるよ。" },
+                { q: "サッカーボールは、しかくい形をしている。", a: false, ex: "えーっ！サッカーボールはまるい形だよ。じゃないと、うまくころがらないね！" },
+                { q: "ユニフォームは、てきとみかたがわかりやすいように、ちがう色をきる。", a: true, ex: "そのとおり！ゴールキーパーだけは、さらにちがう色のユニフォームをきるんだ。" },
+                { q: "せんしゅをこうたいできるのは、3かいまでと決まっている。", a: false, ex: "いまはルールがかわって、5人までこうたいできるようになったんだ。（大会によってちがうこともあるよ）" },
+                { q: "ボールをけって、あいてのゴールをねらうことを「シュート」という。", a: true, ex: "せいかい！シュートがたくさんきまると、もりあがるね！" },
+                { q: "サッカーのしあいをさばく人を「レフェリー」という。", a: true, ex: "せいかい！日本語では「しんぱん」ともいうね。みんながルールをまもるように見ているんだ。" },
+                { q: "ゴールをまもるせんしゅを「フォワード」という。", a: false, ex: "ざんねん！ゴールをまもるのは「ゴールキーパー」。フォワードは、てんをとるのがとくいなせんしゅだよ。" },
+                { q: "じぶんのチームのゴールにボールをいれても、てんにはならない。", a: false, ex: "ざんねん！じぶんのゴールにいれてしまうと、あいてのチームのとくてんになるんだ。「オウンゴール」っていうよ。" },
+            ],
+            normal: [
+                { q: "オフサイドは、フィールドのどこでもおこりうる反則だ。", a: false, ex: "ざんねん！オフサイドは、あいてチームの陣地（フィールドの半分よりゴールがわ）でしかおこらないんだ。" },
+                { q: "コーナーキックから、だれにもさわらずに直接ゴールにはいっても、とくてんになる。", a: true, ex: "せいかい！とてもむずかしいけど、ルール上はOKなんだ。これを「オウンゴール」とはよばないよ。" },
+                { q: "イエローカードを同じしあいで2まいもらうと、退場になる。", a: true, ex: "そのとおり！イエローカード2まいでレッドカードとおなじあつかいになり、そのしあいはもう出られなくなるんだ。" },
+                { q: "ゴールキーパーが、味方からのスローインを手でキャッチしてもよい。", a: false, ex: "ざんねん！味方からのスローインや、足で意図的に出されたパスは、ゴールキーパーも手でさわれないんだ。足であつかわないといけないよ。" },
+                { q: "PK（ペナルティーキック）は、ゴールから11メートルのきょりからける。", a: true, ex: "せいかい！ゴールラインから12ヤード、メートルにするとだいたい11メートルなんだ。" },
+                { q: "フリーキックには、直接ゴールをねらえる「直接フリーキック」と、ねらえない「間接フリーキック」がある。", a: true, ex: "せいかい！間接フリーキックは、けったボールが他のだれかにさわってからじゃないとゴールにならないんだ。" },
+                { q: "アディショナルタイムとは、せんしゅがトイレにいくための時間だ。", a: false, ex: "ちがうよ！せんしゅのケガなどで止まっていた時間を、前半や後半のおわりに追加する時間のことだよ。「ロスたいむ」ともいうね。" },
+                { q: "ワールドカップは、毎年かいさいされる。", a: false, ex: "ざんねん！サッカーの世界一をきめるワールドカップは、4年に1度だけひらかれる、とても大きな大会なんだ。" },
+                { q: "レッドカードをもらって退場したせんしゅのかわりは、すぐに入れることができる。", a: false, ex: "ざんねん！退場がおきると、そのチームはのこりの時間を1人すくない人数でたたかわないといけないんだ。" },
+                { q: "サッカーのフィールドの大きさは、どのスタジアムでもまったく同じである。", a: false, ex: "ざんねん！サッカーのコートは、きめられたはんいの中であれば、すこし大きかったり小さかったりしてもOKなんだ。" },
+            ],
+            hard: [
+                { q: "ワールドカップで、いちばんたくさん優勝している国はブラジルである。", a: true, ex: "せいかい！「サッカー王国」とよばれるブラジルは、これまで5回も優勝しているんだ。" },
+                { q: "コーナーキックをけるとき、ボールをけった本人が、だれもさわる前にもう一度ボールにさわってもよい。", a: false, ex: "ざんねん！キックインプレーのルールで、キッカーは他のせんしゅがさわるまでボールにふれてはいけないんだ。" },
+                { q: "スローインから直接オウンゴール（じぶんのゴールにいれる）をしても、とくてんにはならず、相手のコーナーキックになる。", a: true, ex: "せいかい！これはマニアックなルール。スローインが直接じぶんのゴールにはいっても失点にはならないんだ。" },
+                { q: "サッカーの神様とよばれた「ペレ」は、プロのしあいで1000ゴール以上きめた。", a: true, ex: "せいかい！ペレは、そのしょうがいで1281ゴールもきめたとされている、まさに伝説のせんしゅだよ。" },
+                { q: "Jリーグがはじまったのは、1983年である。", a: false, ex: "ざんねん！日本のプロサッカーリーグ「Jリーグ」が開幕したのは、1993年5月15日なんだ。" },
+                { q: "ボールの空気あつは、どのしあいでもおなじ強さにしなければならない。", a: true, ex: "せいかい！ルールでボールの空気あつはきめられていて、しあいの前にはしんぱんがチェックするんだ。" },
+                { q: "「完全なオフサイド」という言葉があるように、オフサイドには「完全じゃないオフサイド」もある。", a: false, ex: "そんなものはないよ！オフサイドはオフサイド。完全も不完全もないんだ。" },
+                { q: "PKせんで、キーパーがキッカーのける前にゴールラインから前に動いたら、やり直しになる。", a: true, ex: "せいかい！キーパーは、ボールがけられるしゅんかんまで、かならず片足のいち部をゴールラインにつけておかないといけないんだ。" },
+                { q: "せんしゅのユニフォームの背番号は、かならず1番から23番までと決まっている。", a: false, ex: "ワールドカップなどでは番号がきめられているけど、クラブチームでは99番など、もっと大きな番号をつけるせんしゅもいるよ。" },
+                { q: "世界でさいしょのサッカーの統一ルールは、イギリスのパブ（おさけをのむみせ）で決められた。", a: true, ex: "せいかい！1863年にロンドンのパブで、今のサッカーにつながるルールが話しあわれたんだ。" },
+            ]
+        };
+
+        // ----- ゲームの状態管理 -----
+        let currentDifficulty = '';
+        let currentQuestions = [];
+        let questionIndex = 0;
+        let score = 0;
+        let timerInterval;
+        let timeLeft = 0;
+        const TIME_LIMIT = 30;
+
+        // ----- 関数 -----
+
+        // 画面を切り替える関数
+        function showScreen(screenName) {
+            Object.keys(screens).forEach(key => {
+                if (key === screenName) {
+                    screens[key].classList.remove('hidden');
+                } else {
+                    screens[key].classList.add('hidden');
+                }
+            });
+        }
+        
+        // ゲーム開始
+        function startGame() {
+            sounds.click();
+            showScreen('difficulty');
+        }
+
+        // 難易度選択
+        function selectDifficulty(difficulty) {
+            sounds.click();
+            currentDifficulty = difficulty;
+            // 問題をシャッフルして10問に絞る
+            currentQuestions = quizzes[difficulty].sort(() => 0.5 - Math.random()).slice(0, 10);
+            startQuiz();
+        }
+
+        // クイズを開始する共通関数
+        function startQuiz() {
+            questionIndex = 0;
+            score = 0;
+            scoreDisplay.textContent = `せいかい: 0`;
+            showScreen('quiz');
+            displayNextQuestion();
+        }
+
+        // 次の問題を表示
+        function displayNextQuestion() {
+            explanationBox.classList.add('hidden');
+            maruButton.disabled = false;
+            batsuButton.disabled = false;
+            
+            if (questionIndex < currentQuestions.length) {
+                const q = currentQuestions[questionIndex];
+                questionBox.textContent = q.q;
+                questionCounter.textContent = `だい ${questionIndex + 1} もん`;
+                startTimer();
+            } else {
+                showResult();
+            }
+        }
+
+        // タイマーを開始
+        function startTimer() {
+            clearInterval(timerInterval);
+            timeLeft = TIME_LIMIT;
+            timerDisplay.textContent = `00:${String(timeLeft).padStart(2, '0')}`;
+            timerDisplay.classList.remove('text-red-500');
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = `00:${String(timeLeft).padStart(2, '0')}`;
+                if (timeLeft <= 10) {
+                    timerDisplay.classList.add('text-red-500');
+                }
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    checkAnswer(null); // 時間切れは不正解扱い
+                }
+            }, 1000);
+        }
+
+        // 回答をチェック
+        function checkAnswer(userAnswer) {
+            clearInterval(timerInterval);
+            maruButton.disabled = true;
+            batsuButton.disabled = true;
+
+            const correct = currentQuestions[questionIndex].a;
+            const isCorrect = userAnswer === correct;
+
+            if (isCorrect) {
+                score++;
+                scoreDisplay.textContent = `せいかい: ${score}`;
+                showFeedback(true);
+                sounds.correct();
+            } else {
+                showFeedback(false);
+                sounds.incorrect();
+            }
+            
+            explanationBox.textContent = currentQuestions[questionIndex].ex;
+            explanationBox.classList.remove('hidden');
+
+            questionIndex++;
+            setTimeout(displayNextQuestion, 4000); // 4秒後に次の問題へ
+        }
+
+        // 正解・不正解のフィードバックを表示
+        function showFeedback(isCorrect) {
+            feedbackSymbol.textContent = isCorrect ? 'O' : 'X';
+            feedbackSymbol.style.color = isCorrect ? '#ef4444' : '#3b82f6'; // 赤と青
+            feedbackOverlay.classList.remove('hidden');
+            
+            setTimeout(() => {
+                feedbackSymbol.style.transform = 'scale(1)';
+                feedbackSymbol.style.opacity = '1';
+            }, 10);
+            
+            setTimeout(() => {
+                feedbackSymbol.style.transform = 'scale(0.5)';
+                feedbackSymbol.style.opacity = '0';
+                setTimeout(() => feedbackOverlay.classList.add('hidden'), 300);
+            }, 1500);
+        }
+
+        // 結果を表示
+        function showResult() {
+            sounds.finish();
+            showScreen('result');
+            finalScoreDisplay.textContent = score;
+            totalQuestionsDisplay.textContent = currentQuestions.length;
+            
+            let title = '';
+            const percentage = (score / currentQuestions.length) * 100;
+
+            if (percentage >= 95) title = 'でんせつのサッカーキング！';
+            else if (percentage >= 80) title = 'にほんだいひょうエース！';
+            else if (percentage >= 65) title = 'サッカーはかせ';
+            else if (percentage >= 45) title = 'みらいのJリーガー';
+            else if (percentage >= 25) title = 'サッカーリフティング10かいレベル';
+            else title = 'サッカーだいすき！にゅうもん';
+
+            titleDisplay.textContent = title;
+        }
+
+        // ゲームをリスタート
+        function restartGame() {
+            sounds.click();
+            showScreen('title');
+        }
+
+        // ----- Gemini API関連 -----
+        async function generateAiQuiz() {
+            const theme = aiThemeInput.value;
+            if (!theme) {
+                alert('クイズのテーマをいれてください。');
+                return;
+            }
+
+            loadingOverlay.classList.remove('hidden');
+
+            const prompt = `
+                あなたは子供向けのサッカー博士です。以下のルールに従って、サッカーに関する〇✕クイズを10問作成してください。
+                
+                # ルール
+                - テーマは「${theme}」です。
+                - 子供にも理解できる簡単な言葉で、ひらがなを多く使ってください。
+                - 回答は必ずJSON形式の配列で出力してください。
+                - 配列の各要素は、以下のキーを持つオブジェクトとします。
+                  - "q": 問題文（文字列）
+                  - "a": 答え（〇ならtrue, ✕ならfalseのブール値）
+                  - "ex": 簡単な解説文（文字列）
+                - 問題文と解説文は、子供がわくわくするような、楽しくて親しみやすい口調にしてください。
+                - 事実に基づいた正確なクイズを作成してください。
+                - Jリーグのチームは全て
+            `;
+
+            try {
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                const payload = { contents: chatHistory };
+                const apiKey = ""; // APIキーは実行環境で自動的に設定されます
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`APIエラー: ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    // AIの返答からJSON部分だけを抽出
+                    const jsonMatch = text.match(/\[[\s\S]*\]/);
+                    if (jsonMatch) {
+                        const questions = JSON.parse(jsonMatch[0]);
+                        currentQuestions = questions;
+                        startQuiz();
+                    } else {
+                        throw new Error('AIからの応答が正しいJSON形式ではありませんでした。');
+                    }
+                } else {
+                    throw new Error('AIから有効な応答がありませんでした。');
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert(`クイズの作成に失敗しました。\n${error.message}\nテーマを変えてもう一度試してみてください。`);
+            } finally {
+                loadingOverlay.classList.add('hidden');
+            }
+        }
+
+        // ----- イベントリスナーの設定 -----
+        startButton.addEventListener('click', startGame);
+        difficultyButtons.forEach(button => {
+            button.addEventListener('click', () => selectDifficulty(button.dataset.difficulty));
+        });
+        maruButton.addEventListener('click', () => checkAnswer(true));
+        batsuButton.addEventListener('click', () => checkAnswer(false));
+        restartButton.addEventListener('click', restartGame);
+        
+        // AI機能のイベントリスナー
+        aiQuizButton.addEventListener('click', () => {
+            sounds.click();
+            showScreen('ai');
+        });
+        
+        backToDifficultyButton.addEventListener('click', () => {
+            sounds.click();
+            showScreen('difficulty');
+        });
+
+        generateAiQuizButton.addEventListener('click', generateAiQuiz);
+
+
+        // ----- 初期化 -----
+        showScreen('title');
+
+    </script>
+</body>
+</html>

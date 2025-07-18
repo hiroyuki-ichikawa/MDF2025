@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas APIを使った超シンプルなゲームループデモ</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        canvas {
+            border: 2px solid #333;
+            background-color: #f0f0f0;
+        }
+        #explanation {
+            margin-top: 20px;
+            text-align: left;
+            padding: 15px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        code {
+            display: block;
+            background-color: #f1f1f1;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre;
+        }
+        .highlight {
+            background-color: #ffff99;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Canvas APIを使った超シンプルなゲームループデモ</h1>
+    <canvas id="game" width="600" height="200"></canvas>
+
+    <script>
+        // Canvasの設定
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        
+        // 初期位置
+        let x = 0;
+        
+        // メインループ関数
+        function loop() {
+            // 1. 前のフレームを消す
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 2. 新しい四角を描く
+            ctx.fillStyle = "#3498db";
+            ctx.fillRect(x, 50, 30, 30);
+            
+            // 3. x座標を少しずつ増やす
+            x += 2;
+            
+            // 画面端に到達したらリセット
+            if (x > canvas.width) {
+                x = -30;
+            }
+            
+            // 4. つぎのフレームへ
+            requestAnimationFrame(loop);
+        }
+        
+        // ゲーム開始
+        loop();
+    </script>
+</body>
+</html>

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>超シンプルなゲームループのサンプル</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        #game-container {
+            position: relative;
+            width: 400px;
+            height: 300px;
+            margin: 0 auto;
+            border: 2px solid #333;
+            background-color: #f0f0f0;
+        }
+        #player {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background-color: #3498db;
+        }
+        #explanation {
+            margin-top: 20px;
+            text-align: left;
+            padding: 15px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+        }
+        code {
+            display: block;
+            background-color: #f1f1f1;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre;
+        }
+        .highlight {
+            background-color: #ffff99;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>超シンプルなゲームループのサンプル</h1>
+    <div id="game-container">
+        <div id="player"></div>
+    </div>
+    <p>操作方法: 矢印キーを使ってプレイヤー（青い四角）を動かしてください。</p>
+
+    <script>
+        // ゲーム状態の変数
+        const gameState = {
+            player: {
+                x: 185,
+                y: 135,
+                width: 30,
+                height: 30,
+                speed: 5
+            },
+            keys: {
+                ArrowUp: false,
+                ArrowDown: false,
+                ArrowLeft: false,
+                ArrowRight: false
+            }
+        };
+
+        // DOM要素の参照を取得
+        const playerElement = document.getElementById('player');
+        const gameContainer = document.getElementById('game-container');
+
+        // ゲームコンテナの寸法を取得
+        const containerWidth = gameContainer.clientWidth;
+        const containerHeight = gameContainer.clientHeight;
+
+        // キーボードイベントのリスナーを設定
+        window.addEventListener('keydown', (e) => {
+            if (gameState.keys.hasOwnProperty(e.key)) {
+                gameState.keys[e.key] = true;
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (gameState.keys.hasOwnProperty(e.key)) {
+                gameState.keys[e.key] = false;
+            }
+        });
+
+        // ゲーム状態を更新する関数
+        function updateState() {
+            // プレイヤーの移動
+            if (gameState.keys.ArrowUp) {
+                gameState.player.y = Math.max(0, gameState.player.y - gameState.player.speed);
+            }
+            if (gameState.keys.ArrowDown) {
+                gameState.player.y = Math.min(containerHeight - gameState.player.height, gameState.player.y + gameState.player.speed);
+            }
+            if (gameState.keys.ArrowLeft) {
+                gameState.player.x = Math.max(0, gameState.player.x - gameState.player.speed);
+            }
+            if (gameState.keys.ArrowRight) {
+                gameState.player.x = Math.min(containerWidth - gameState.player.width, gameState.player.x + gameState.player.speed);
+            }
+        }
+
+        // 画面描画関数
+        function renderFrame() {
+            // プレイヤーの位置更新
+            playerElement.style.left = `${gameState.player.x}px`;
+            playerElement.style.top = `${gameState.player.y}px`;
+        }
+
+        // メインのゲームループ
+        function mainLoop() {
+            updateState();    // ゲームの状態を更新
+            renderFrame();    // 状態に合わせて画面を描画
+            requestAnimationFrame(mainLoop);  // 次のフレームをスケジュール
+        }
+
+        // ゲームスタート
+        mainLoop();
+    </script>
+</body>
+</html>

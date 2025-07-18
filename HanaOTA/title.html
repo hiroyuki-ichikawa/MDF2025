@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>えほんのせかい</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kiwi+Maru&display=swap" rel="stylesheet">
+    <style>
+    body {
+        background-color: #ffffff;
+        margin: 0;
+        padding: 0;
+        text-align: center;
+    }
+
+    header {
+        background-color: #194E00;
+        padding-top: 100px ;
+        padding-bottom: 100px;
+        margin-top: -30px;
+        box-shadow: 0 4px 3px rgba(11, 11, 11, 0.1);
+        border-bottom-left-radius: 80px;  
+        border-bottom-right-radius: 80px;
+    }
+
+    h1 {
+        color: #fff;
+        font-size: 50px;
+        letter-spacing: 1em;
+        font-family:"Kiwi Maru", serif;
+    }
+
+    p {
+        font-size: 24px;
+        color: #916C00;
+        letter-spacing: 0.3em;
+        border-bottom: 1.8px solid #916d00a3;
+        display: inline-block;
+        line-height: 65px;
+        font-weight: 700;
+        font-family:"Kiwi Maru", serif;
+    }
+
+    main {
+        padding: 2rem 1rem;
+    }
+
+    section{
+        padding: 30px;
+    }
+
+    .book-menu {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 120px;
+        margin-top: 1rem;
+    }
+
+    .book-menu a {
+        text-decoration: none;
+        text-align: center;
+        width: 160px;
+    }
+    .book-title {
+        display: block;
+        margin-top: 0.5em;
+        font-size: 16px;
+        font-weight: bold;
+    }
+
+    .title-green {
+        color: #AF8D68;
+    }
+
+    .title-blue {
+        color: #6894AF;
+    }
+
+    .title-pink {
+        color: #B2AB67;
+    }
+
+    .title-orange {
+        color: #AF6888;
+    }
+    .book-img {
+        width: 150px;
+        height: auto;
+    }
+
+    .book-img:hover {
+        transform: scale(1.1);
+    }
+
+    footer {
+        margin-top: 3rem;
+        padding: 1rem;
+        font-size: 0.9rem;
+        color: #888;
+    }
+
+    </style>
+</head>
+<body>
+    <main>
+        <header>
+            <h1>えほんのせかい</h1>
+        </header>
+        <section>
+            <p>すきな　えほんを　えらぼう</p>
+        </section>
+        <section>
+            <div class="book-menu">
+                <a href="book01.html">
+                    <img src="img/1x/book01.png" alt="ぼくはカエル" class="book-img">
+                    <span class="book-title title-green">ぼくはカエル</span>
+                </a>
+                <a href="book02.html">
+                    <img src="img/1x/book02.png" alt="きみはだれ？" class="book-img">
+                    <span class="book-title title-blue">きみはだれ？</span>
+                </a>
+                <a href="book03.html">
+                    <img src="img/1x/book03.png" alt="きみのこえ" class="book-img">
+                    <span class="book-title title-pink">きみのこえ</span>
+                </a>
+                <a href="book04.html">
+                    <img src="img/1x/book04.png" alt="ぼくのともだち ぐわぐわ" class="book-img">
+                    <span class="book-title title-orange">ぼくのともだち<br>ぐわぐわ</span>
+                </a>
+            </div>
+        </section>
+        <footer>
+            <div id="continue-btn-container"></div>
+            &copy; 2025 えほんはいいぞ
+        </footer>
+    </main>
+    <script>
+        const lastPage = localStorage.getItem("lastPage");
+
+        // 今のページと違うならボタンを表示
+        if (lastPage && lastPage !== window.location.href) {
+            const container = document.getElementById("continue-btn-container");
+
+            const button = document.createElement("a");
+            button.href = lastPage;
+            button.textContent = "▶ つづき";
+            button.style.display = "inline-block";
+            button.style.padding = "25px 50px";
+            button.style.backgroundColor = "#194E00";
+            button.style.color = "#fff";
+            button.style.textDecoration = "none";
+            button.style.borderRadius = "45px";
+            button.style.fontWeight = "bold";
+            button.style.fontSize = "18px";
+            button.style.boxShadow = "2px 2px 6px rgba(0,0,0,0.2)";
+            button.style.marginBottom = "30px";
+
+            container.appendChild(button);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ぼくはカエル</title>
+
+    <!-- フォント -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Kiwi+Maru&display=swap" rel="stylesheet" />
+
+    <!-- TensorFlow & Teachable Machine ライブラリ -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.14.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8/dist/teachablemachine-pose.min.js"></script>
+
+    <style>
+        /* 省略: 先ほどのスタイルをそのまま使ってOK */
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>ぼくはカエル</h1>
+</header>
+
+<section class="main">
+    <div class="camera">
+        <video id="webcam" autoplay muted playsinline></video>
+        <img src="img/1x/handsUp.png" width="200" alt="ポーズ画像" />
+        <img class="gif" src="img/1x/handsUp.gif" alt="動き方GIF" width="180" />
+        <p>よめたら<br>うごきを まねして<br>つぎの ページに すすもう！</p>
+    </div>
+
+    <div class="ehon">
+        <img id="storybook" src="img/bookclose.png" alt="絵本ページ" />
+        <div class="page" id="page-text">
+            ぼくはカエル。<br>
+            ぴょんぴょん はねるよ。<br>
+            みどりいろで、すいすいおよぐ。
+        </div>
+    </div>
+</section>
+
+<div class="nav-buttons">
+    <button onclick="window.location.href='title.html'">おわる</button>
+</div>
+
+<footer>
+    &copy; 2025 えほんはいいぞ
+</footer>
+
+<script>
+    // モデルのパス
+    const modelURL = "./motion/model.json";
+    const metadataURL = "./motion/metadata.json";
+
+    // DOM要素
+    const video = document.getElementById("webcam");
+    const book = document.getElementById("storybook");
+    const pageTextElement = document.getElementById("page-text");
+
+    // 状態管理
+    let model, webcam;
+    let currentPage = 1;
+    const maxPages = 6;
+    let isAnimating = false;
+    let bookOpened = false;
+    let lastGestureTime = 0;
+    const gestureCooldown = 100; // 10秒クールダウン
+
+    // ページテキスト
+    const pageTexts = [
+        "ぼくはカエル。\nぴょんぴょん はねるよ。\nみどりいろで、すいすいおよぐ。",
+        "あさになると かえるは げんき！\nそとに とびだす よういばんたん。",
+        "ともだちと あそぶのが だいすき。\nみんなで ジャンプ！ ジャンプ！",
+        "おひるは すいすい およぎます。\nはっぱの うえで ひとやすみ。",
+        "よるになると おやすみなさい。\nゆめのなかでも ジャンプしてる。",
+        "おしまい。\nまた あそぼうね。"
+    ];
+
+    // ページ内容更新
+    function updatePageContent(pageNum) {
+        pageTextElement.innerHTML = pageTexts[pageNum - 1].replace(/\n/g, "<br>");
+    }
+
+    // 本を開くアニメーション
+    function openBook() {
+        if (isAnimating || bookOpened) return;
+        isAnimating = true;
+
+        book.src = `img/bookopen.gif?${Date.now()}`;
+        setTimeout(() => {
+            book.src = "img/bookopen.png";
+            isAnimating = false;
+            bookOpened = true;
+            updatePageContent(currentPage);
+        }, 1500);
+    }
+
+    // 本のアニメーション再生
+    function playBookAnimation() {
+        if (isAnimating) return;
+        isAnimating = true;
+
+        
+        book.src = `img/bookopen.gif?${Date.now()}`;
+
+        setTimeout(() => {
+            book.src = "img/bookopen.png";
+            updatePageContent(currentPage); // openBook のときだけテキスト更新
+            isAnimating = false;
+        }, 1500);
+    }
+
+    // クールダウン判定
+        function isCooldownActive() {
+        const now = Date.now();
+        const diff = now - lastGestureTime;
+        console.log("クールダウン差分:", diff); // デバッグ
+        return diff < gestureCooldown;
+    }
+
+    // 初期化
+    async function init() {
+        model = await tmPose.load(modelURL, metadataURL);
+
+        webcam = new tmPose.Webcam(400, 400, true);
+        await webcam.setup();
+        await webcam.play();
+        video.srcObject = webcam.webcamStream;
+        window.requestAnimationFrame(loop);
+    }
+
+    // ループ
+    async function loop() {
+        webcam.update();
+        await predict();
+        window.requestAnimationFrame(loop);
+    }
+
+    // ポーズ判定とページめくり
+    async function predict() {
+        const { pose, posenetOutput } = await model.estimatePose(webcam.canvas);
+        const prediction = await model.predict(posenetOutput);
+
+        if (prediction[0].probability > 0.9 && !isCooldownActive()) {
+
+            // ページ更新・アニメーション
+            if (!bookOpened) {
+                openBook();
+            } else if (currentPage < maxPages) {
+                currentPage++;
+                updatePageContent(currentPage);
+                playBookAnimation();
+            }
+
+            // ← 全処理のあとにクールダウンを開始する
+            lastGestureTime = Date.now();
+            }
+
+    }
+
+    window.addEventListener("load", init);
+</script>
+
+</body>
+</html>

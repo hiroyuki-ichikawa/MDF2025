@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ぼくはカエル</title>
+    <!-- フォントとライブラリの読み込み -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kiwi+Maru&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.14.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
+
+<style>
+    body {
+        font-family: 'Arial', sans-serif;
+        background-color: #ffffff;
+        text-align: center;
+        padding: 2rem;
+    }
+    header { text-align: left; }
+    h1 {
+        font-family: "Kiwi Maru", serif;
+        color: #AF8D68;
+        border-bottom: 1.8px solid #916d00a3;
+        display: inline-block;
+        line-height: 65px;
+    }
+    .main {
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        gap: 3rem;
+        margin-top: 2rem;
+        flex-wrap: wrap;
+        width: 100%;
+        max-width: 1200px;
+        margin-left: auto;
+        margin-right: auto;
+        box-sizing: border-box;
+        text-align: left;
+    }
+    .camera {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .camera p {
+        font-size: 16px;
+        font-weight: bold;
+        color: #AF8D68;
+        text-align: left;
+        margin-left: 30px;
+    }
+    .ehon {
+        flex: 2;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    video {
+        border-radius: 50%;
+        width: 200px;
+        height: 200px;
+        object-fit: cover;
+        border: 3px solid #AF8D68;
+    }
+    .page {
+        margin: 2rem auto;
+        font-size: 1.8rem;
+        background: white;
+        padding: 2rem;
+        border-radius: 1rem;
+        width: 80%;
+        max-width: 1600px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .nav-buttons {
+        margin-top: 80px;
+    }
+    .nav-buttons :first-child {
+        margin-right: 40px;
+    }
+    button {
+        padding: 25px 50px;
+        background-color: #194E00;
+        color: #fff;
+        text-decoration: none;
+        border-radius: 45px;
+        font-weight: bold;
+        font-size: 18px;
+        box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
+        border: none;
+    }
+    button:hover {
+        background-color: #194E00;
+    }
+    footer {
+        margin-top: 22px;
+        font-size: 0.9rem;
+        color: #888;
+    }
+</style>
+</head>
+<body>
+    <header>
+        <h1>ぼくはカエル</h1>
+    </header>
+
+    <section class="main">
+        <div class="camera">
+            <video id="webcam" autoplay></video>
+            <img src="img/1x/handsUp.png" width="200" alt="テキスト">
+            <img class="gif" src="img/1x/handsUp.gif" alt="動き方GIF" width="180">
+            <p>よめたら<br>うごきを　まねして<br>つぎの　ページに　すすもう！</p>
+        </div>
+
+        <div class="ehon">
+            <img id="storybook" src="img/bookclose.png" alt="絵本ページ" width="300">
+            <div class="page" id="page-text">&nbsp;</div>
+        </div>
+    </section>
+
+    <div class="nav-buttons">
+        <button onclick="window.location.href='title.html'">おわる</button>
+    </div>
+
+    <footer>
+        <audio id="bgm" src="audio/bgm.mp3" loop></audio>
+        <audio id="narration"></audio>
+        <div id="continue-btn-container"></div>
+        &copy; 2025 えほんはいいぞ
+    </footer>
+
+    <script>
+        const pageImages = [
+            "bookclose.png",
+            "bookopen.gif",
+            "00001.jpg",
+            "bookopen.gif",
+            "00002.jpg",
+            "bookopen.gif",
+            "00003.jpg",
+            "bookopen.gif",
+            "00004.jpg",
+            "bookopen.gif",
+            "00005.jpg",
+            "bookopen.gif",
+            "bookclose.png"
+        ];
+
+        const pageTexts = [
+            "ぼくはカエル",
+            "",
+            "あさですよ。<br>ぴかぴか おひさまが おしえてる。",
+            "",
+            "もぐもぐ もぐもぐ<br>あさごはん おいしいな！",
+            "",
+            "きょうは なにを きようかな？<br>あれも これも それもいい。",
+            "",
+            "これで じゅんびは できた。<br>きょうは つり でもしようかな？",
+            "",
+            "ぷかぷか うきが ういている。<br>おさかな いっぱい つれるかな。",
+            "",
+            "つづく。<br>また よんでね。"
+        ];
+
+        const book = document.getElementById("storybook");
+        const pageTextElement = document.getElementById("page-text");
+        const narration = document.getElementById("narration");
+        const video = document.getElementById("webcam");
+        const bgm = document.getElementById("bgm");
+
+        let currentPage = 0;
+        let isAnimating = false;
+        let lastGestureTime = 0;
+
+        function isCooldownActive() {
+            const now = Date.now();
+            if (now - lastGestureTime < 2000) return true;
+            lastGestureTime = now;
+            return false;
+        }
+
+        function updatePage() {
+            isAnimating = true;
+            const image = pageImages[currentPage];
+            book.src = `img/${image}`;
+            pageTextElement.innerHTML = pageTexts[currentPage] || "";
+            if (pageTexts[currentPage]) {
+                narration.src = `audio/page${Math.floor((currentPage + 1) / 2)}.mp3`;
+                narration.play();
+            }
+
+            const delay = image.includes(".gif") ? 2000 : 0;
+            if (delay > 0) {
+                setTimeout(() => {
+                    isAnimating = false;
+                    nextPage();  // GIF後に自動で次ページへ
+                }, delay);
+            } else {
+                isAnimating = false;
+            }
+
+        }
+
+        function nextPage() {
+            if (isAnimating || currentPage >= pageImages.length - 1) return;
+            currentPage++;
+            updatePage();
+        }
+
+        async function startPoseDetection() {
+            const detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet);
+
+            const detect = async () => {
+                const poses = await detector.estimatePoses(video);
+                if (poses.length > 0) {
+                    const keypoints = poses[0].keypoints;
+                    const leftWrist = keypoints.find(k => k.name === "left_wrist");
+                    const rightWrist = keypoints.find(k => k.name === "right_wrist");
+                    const nose = keypoints.find(k => k.name === "nose");
+                    const handsUp = (leftWrist && leftWrist.y < nose.y) || (rightWrist && rightWrist.y < nose.y);
+
+                    if (handsUp && !isCooldownActive()) nextPage();
+                }
+                requestAnimationFrame(detect);
+            };
+
+            detect();
+        }
+
+        navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+            video.srcObject = stream;
+            video.onloadedmetadata = () => {
+                video.play();
+                tf.setBackend('webgl').then(() => startPoseDetection());
+            };
+        });
+
+        bgm.play();
+        updatePage();
+    </script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Move your body!</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- TensorFlow.jsの読み込み -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+  <!-- Teachable Machine Poseライブラリの読み込み -->
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8/dist/teachablemachine-pose.min.js"></script>
+</head>
+<body>
+  <h1>お手本に合わせてポーズしよう！</h1>
+  <h2>- Move your body❗️ -</h2>
+  <h3>カメラに上半身が映るように椅子に座りましょう！</h3>
+  <div id="level-container">Level : <span id="level-num">1</span></div>
+
+  <div id="game-area">
+    <!-- あなた -->
+    <div class="player-area">
+      <h2>あなた</h2>
+      <div id="webcam-container"></div>
+    </div>
+
+    <!-- お手本さん -->
+    <div class="player-area">
+      <h2>お手本さん</h2>
+      <div id="reference-container">
+        <img id="reference-img" src="poses/pose1.png" alt="reference pose">
+      </div>
+    </div>
+  </div>
+  <div id="label-container"></div>
+  <div id="status"></div>
+  
+  <script src="script.js"></script>
+</body>
+</html>
