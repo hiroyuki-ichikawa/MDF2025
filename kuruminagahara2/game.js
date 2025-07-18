@@ -74,7 +74,7 @@ keyImage.src = "images/key.png";
 
 //流れ星
 const starImage = new Image();
-starImage.src = "images/star.png";
+starImage.src = "images/Star.png";
 
 const clearImage = new Image();
 clearImage.src = "images/clear.png";
